@@ -21,6 +21,8 @@ Now receive data from a Run object.
 ```
 * Add to the new event:
 ```sh
+const TR = require('tr_cypress_reporter_simple');
+****
 on('after:run', (run, results) => {
     let tr = new TestRaiImporter(run);
     tr.updateSuiteCases();
