@@ -293,4 +293,4 @@ class TestRaiImporter {
     //file example hrs/plugins/tr_integration/run_all_cases.json
 }
 
-module.exports = TestRailConnector
+module.exports = TestRaiImporter;
