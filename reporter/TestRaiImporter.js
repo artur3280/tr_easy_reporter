@@ -292,3 +292,5 @@ class TestRaiImporter {
     // tr.importStatusesToNewRun();
     //file example hrs/plugins/tr_integration/run_all_cases.json
 }
+
+module.exports = TestRailConnector
