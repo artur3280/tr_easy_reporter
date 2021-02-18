@@ -133,6 +133,13 @@ class TestRaiImporter {
         return this.tr.getResultsForCase(runId, caseId, {status_id: statusesId})
     }
 
+    closeRun(runId, close) {
+        if (runId && close) {
+            this.tr.closeRun(runId);
+            console.log("Run " + runId + " has been closed.")
+        }
+    }
+
     updateSuiteCases() {
         this.run.runs.forEach(r => {
             let sections = this.getSuiteSections(this._project.id, this._suite.id);
@@ -205,7 +212,7 @@ class TestRaiImporter {
         return this.tr.addResultsForCases(runId, casesReport);
     }
 
-    importStatusesToNewRun() {
+    importStatusesToNewRun(closeRun) {
         let cases = this.getSuiteCases(this._project.id, this._suite.id);
         let runs = this.getRuns(this._project.id);
 
@@ -246,6 +253,7 @@ class TestRaiImporter {
 
         this.sendResults(this._project.id, this._suite.id, runObj.id, cases, this.run)
         this.uploadScreenShotsToFailedTests();
+        this.closeRun(runObj.id, closeRun)
     }
 
     uploadScreenShotsToFailedTests() {
@@ -290,7 +298,7 @@ class TestRaiImporter {
     // let tr = new TestRaiImporter(this.run);
     // tr.updateSuiteCases();
     // tr.importStatusesToNewRun();
-    //file example hrs/plugins/tr_integration/run_all_cases.json
+    //file example /plugins/tr_integration/run_all_cases.json
 }
 
 module.exports = TestRaiImporter;

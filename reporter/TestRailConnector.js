@@ -3,7 +3,6 @@ const qs = require('querystring');
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const unirest = require('unirest');
 
-
 class TestRailConnector {
     constructor(options) {
         this.host = options.host;

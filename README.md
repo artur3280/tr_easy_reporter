@@ -29,6 +29,15 @@ on('after:run', (run, results) => {
     tr.importStatusesToNewRun();
 })
 ```
-
+* You can also close RUN. If you leave the parameter empty, RUN will not be closed.
+```sh
+const TestRaiImporter = require("tr_cypress_reporter_simple");
+****
+on('after:run', (run, results) => {
+    let tr = new TestRaiImporter(run);
+    tr.updateSuiteCases();
+    tr.importStatusesToNewRun(true);
+})
+```
 ## The data will be sent only after starting RUN.
 
