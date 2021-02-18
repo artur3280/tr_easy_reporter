@@ -2,6 +2,7 @@
 const TestRailConnector = require("./TestRailConnector");
 const credentials = require( "../tr_credentials.json");
 
+
 class TestRaiImporter {
     constructor(run) {
         this.connection();
