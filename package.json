@@ -1,0 +1,31 @@
+{
+  "name": "tr_easy_reporter_for_cypress",
+  "version": "0.1.0",
+  "description": "This is a simple module designed to easily upload information about tests to a testrail. The module does not use asynchronous requests and you can easily inject methods into the Cypress context.",
+  "main": "./reporter/TestRaiImporter.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artur3280/tr_easy_reporter.git"
+  },
+  "keywords": [
+    "TestRail",
+    "Cypress",
+    "Reporting"
+  ],
+  "author": "Hnunyan Artur <artur.gnunyan@icloud.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/artur3280/tr_easy_reporter/issues"
+  },
+  "homepage": "https://github.com/artur3280/tr_easy_reporter#readme",
+  "dependencies": {
+    "chai-jquery": "^2.1.0",
+    "esm": "3.2.25",
+    "filereader": "0.10.3",
+    "unirest": "^0.6.0",
+    "xmlhttprequest": "1.8.0"
+  }
+}
