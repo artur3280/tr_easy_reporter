@@ -1,6 +1,6 @@
 'use strict';
 const TestRailConnector = require("./TestRailConnector");
-const credentials = require( "../tr_credentials.json");
+const credentials = require( "../../../tr_credentials.json");
 
 
 class TestRaiImporter {
