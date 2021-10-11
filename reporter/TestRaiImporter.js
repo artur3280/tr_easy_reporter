@@ -23,7 +23,7 @@ class TestRaiImporter {
 
     findProject(name) {
         console.log("Find project by " + name);
-        let projects = this.tr.getProjects({is_completed: 0});
+        let projects = this.tr.getProjects({is_completed: 0}).projects;
         if (projects.filter(p => p.name === name).length === 0) {
             throw new Error("Project " + name + " does not found")
         } else {
@@ -46,7 +46,7 @@ class TestRaiImporter {
     getSuiteCases(projectId, suiteId) {
         console.log("Get case list from suite " + suiteId + " in " + projectId);
         if (projectId && suiteId)
-            return this.tr.getCases(projectId, {suite_id: suiteId});
+            return this.tr.getCases(projectId, {suite_id: suiteId}).cases;
         else
             throw new Error('Project id or Suite id eqls null')
     }
@@ -54,7 +54,7 @@ class TestRaiImporter {
     getSectionCases(projectId, suiteId, sectionId) {
         console.log("Get case list from section " + sectionId + " in " + suiteId);
         if (projectId && suiteId)
-            return this.tr.getCases(projectId, {suite_id: suiteId, section_id: sectionId});
+            return this.tr.getCases(projectId, {suite_id: suiteId, section_id: sectionId}).cases;
         else
             throw new Error('Project id or Suite id eqls null')
     }
@@ -62,7 +62,7 @@ class TestRaiImporter {
     getSuiteSections(projectId, suiteId) {
         console.log("Get section list from suite " + suiteId + " in " + projectId);
         if (projectId && suiteId)
-            return this.tr.getSections(projectId, {suite_id: suiteId});
+            return this.tr.getSections(projectId, {suite_id: suiteId}).sections;
         else
             throw new Error('Project id or Suite id eqls null')
     }
@@ -70,7 +70,7 @@ class TestRaiImporter {
     getRuns(projectId) {
         console.log("Get run list for" + projectId);
         if (projectId)
-            return this.tr.getRuns(projectId, {is_completed: 0});
+            return this.tr.getRuns(projectId, {is_completed: 0}).runs;
         else
             throw new Error('Project id eql null')
     }
@@ -125,12 +125,12 @@ class TestRaiImporter {
 
     getResultsByRun(runId, statusesId) {
         console.log("Get results for run: " + runId + " by " + statusesId);
-        return this.tr.getResultsForRun(runId, {status_id: statusesId})
+        return this.tr.getResultsForRun(runId, {status_id: statusesId}).results;
     }
 
     getResultsByCase(runId, caseId, statusesId) {
         console.log("Get results for case: " + caseId + " by status " + statusesId);
-        return this.tr.getResultsForCase(runId, caseId, {status_id: statusesId})
+        return this.tr.getResultsForCase(runId, caseId, {status_id: statusesId}).results;
     }
 
     closeRun(runId, close) {

@@ -37,6 +37,7 @@ class TestRailConnector {
         xmlHttp.open(method, url, false, this.user, this.password);
         xmlHttp.setRequestHeader('Content-Type', 'application/json')
         xmlHttp.setRequestHeader('Accept', 'application/json')
+        xmlHttp.setRequestHeader('x-api-ident', 'beta')
         xmlHttp.send(body);
         if (xmlHttp.status !== 200) throw new Error(xmlHttp.status + ":" + xmlHttp.statusText + "\n " + xmlHttp.responseText)
         return JSON.parse(xmlHttp.responseText);
