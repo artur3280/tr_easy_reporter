@@ -1,4 +1,10 @@
 # TestRail reporter for Cypress
+## _Updates_
+### Version: 0.2
+* Optimize imports data to TR
+* Fix upload non-exist images
+* Removing not used requests from importer
+
 ## _First step:_
 The first step is to enable the experimental Cypress feature: ``` "experimentalRunEvents": true ```
 Then you need to add a new event to cypress/plugins/index.js

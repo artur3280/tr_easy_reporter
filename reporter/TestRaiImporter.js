@@ -1,7 +1,7 @@
 'use strict';
 const TestRailConnector = require("./TestRailConnector");
-const credentials = require( "../../../tr_credentials.json");
-
+const credentials = require("../../../tr_credentials.json");
+const fs = require('fs');
 
 class TestRaiImporter {
     constructor(run) {
@@ -165,13 +165,14 @@ class TestRaiImporter {
 
     }
 
-    sendResults(projectId, suiteId, runId, casesTR, run) {
+    sendResults(projectId, suiteId, runId, run) {
         let casesReport = [];
-        run.runs.forEach(localRun => {
-            let section = this.getSuiteSections(projectId, suiteId).filter(section => section.name === localRun.spec.name)[0];
-            let cases = this.getSectionCases(projectId, suiteId, section.id);
-            cases.forEach(caseTR => {
+        this.currentCases = this.getCurrentCasesBySections(projectId, suiteId);
+        console.log(this.currentCases);
 
+        run.runs.forEach(localRun => {
+            this.casesFromTR = this.currentCases.filter(obj => obj.section_name === localRun.spec.name)[0].cases;
+            this.casesFromTR.forEach(caseTR => {
                 localRun.tests.forEach(caseLocal => {
                     if (caseLocal.title.map((s) => {
                         return s.trim()
@@ -212,8 +213,20 @@ class TestRaiImporter {
         return this.tr.addResultsForCases(runId, casesReport);
     }
 
+    getCurrentCasesBySections(projectId, suiteId) {
+        let currentCases = [];
+
+        let sections = this.getSuiteSections(projectId, suiteId);
+        for (let section of sections) {
+            let object = {};
+            object.section_name = section.name;
+            object.cases = this.getSectionCases(projectId, suiteId, section.id);
+            currentCases.push(object);
+        }
+        return currentCases;
+    }
+
     importStatusesToNewRun(closeRun) {
-        let cases = this.getSuiteCases(this._project.id, this._suite.id);
         let runs = this.getRuns(this._project.id);
 
         let date = new Date();
@@ -251,7 +264,7 @@ class TestRaiImporter {
             this.updateRun(runObj.id, this._suite.id, runName, runDescription)
         }
 
-        this.sendResults(this._project.id, this._suite.id, runObj.id, cases, this.run)
+        this.sendResults(this._project.id, this._suite.id, runObj.id, this.run)
         this.uploadScreenShotsToFailedTests();
         this.closeRun(runObj.id, closeRun)
     }
@@ -284,8 +297,12 @@ class TestRaiImporter {
                     let results = this.getResultsByCase(runObj.id, caseTRiD.id, [5])
                     if (caseLocal.attempts[0].screenshots.length !== 0 && results.length !== 0) {
                         caseLocal.attempts[0].screenshots.forEach(screenShot => {
-                            console.log("Upload screenshot to result " + results[0].id + " by path " + screenShot.path)
-                            this.attachToCaseResult(results[0].id, screenShot.path)
+                            if (fs.existsSync(screenShot.path)) {
+                                console.log("Upload screenshot to result " + results[0].id + " by path " + screenShot.path)
+                                this.attachToCaseResult(results[0].id, screenShot.path)
+                            } else {
+                                console.log("Not exist file by path " + screenShot.path)
+                            }
                         })
                     }
                 }

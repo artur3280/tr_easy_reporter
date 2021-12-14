@@ -1,6 +1,6 @@
 {
   "name": "tr_cypress_reporter_simple",
-  "version": "0.1.8",
+  "version": "0.2",
   "description": "This is a simple module designed to easily upload information about tests to a testrail. The module does not use asynchronous requests and you can easily inject methods into the Cypress context.",
   "main": "./reporter/TestRaiImporter.js",
   "scripts": {
@@ -13,7 +13,8 @@
   "keywords": [
     "TestRail",
     "Cypress",
-    "Reporting"
+    "Reporting",
+    "Simple"
   ],
   "author": "Hnunyan Artur <artur.gnunyan@icloud.com>",
   "license": "ISC",

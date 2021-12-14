@@ -58,7 +58,7 @@ class TestRailConnector {
             .attach('attachment', filePath)
             .end(function (res) {
                 if (res.error) throw new Error(res.error);
-                console.log("===========> Uploaded"+ JSON.stringify(res.raw_body));
+                console.log("===========> Uploaded" + JSON.stringify(res.raw_body));
             });
     }
 
