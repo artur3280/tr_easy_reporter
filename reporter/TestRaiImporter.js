@@ -141,9 +141,32 @@ class TestRaiImporter {
     }
 
     updateSuiteCases() {
+        let sections = this.getSuiteSections(this._project.id, this._suite.id);
+        let cases_from_suite = this.getSuiteCases(this._project.id, this._suite.id)
+
+        let completed_data = {};
+        let completed_sections = [];
+
+
+        sections.forEach(section => {
+            let filtered_cases = cases_from_suite.filter(c => c.section_id === section.id)
+            let s = {};
+            if (filtered_cases.length === 0) {
+                s.section_name = section.name;
+                s.section_id = section.id;
+                s.cases = [];
+            } else {
+                s.section_name = section.name;
+                s.section_id = section.id;
+                s.cases = filtered_cases;
+            }
+            completed_sections.push(s);
+        })
+        completed_data.sections = completed_sections;
+
         this.run.runs.forEach(r => {
-            let sections = this.getSuiteSections(this._project.id, this._suite.id);
-            if (sections.filter(section => section.name === r.spec.name).length === 0) {
+            let filtered_section = completed_data.sections.filter(section => section.section_name === r.spec.name);
+            if (filtered_section.length === 0) {
                 let section = this.createNewSection(this._project.id, this._suite.id, r.spec.name);
                 r.tests.forEach(test => {
                     this.createNewCase(section.id, test.title.map((s) => {
@@ -151,61 +174,84 @@ class TestRaiImporter {
                     })[test.title.length - 1], test.body)
                 })
             } else {
-                let section = sections.filter(section => section.name === r.spec.name)[0];
-                let cases = this.getSectionCases(this._project.id, this._suite.id, section.id);
                 r.tests.forEach(test => {
-                    if (cases.filter(c => c.title.toString === test.title.map((s) => {
+                    if (filtered_section[0].cases.filter(c => c.title === test.title.map((s) => {
                         return s.trim()
-                    })[test.title.length - 1].toString).length === 0) {
-                        this.createNewCase(section.id, test.title[test.title.length - 1], test.body)
+                    })[test.title.length - 1]).length === 0) {
+                        this.createNewCase(filtered_section[0].section_id, test.title.map((s) => {
+                            return s.trim()
+                        })[test.title.length - 1], test.body)
                     }
                 })
             }
-        })
-
+        });
     }
 
     sendResults(projectId, suiteId, runId, run) {
+        let sections = this.getSuiteSections(this._project.id, this._suite.id);
+        let cases_from_suite = this.getSuiteCases(this._project.id, this._suite.id)
+
+        let completed_data = {};
+        let completed_sections = [];
+
+
+        sections.forEach(section => {
+            let filtered_cases = cases_from_suite.filter(c => c.section_id === section.id)
+            let s = {};
+            if (filtered_cases.length === 0) {
+                s.section_name = section.name;
+                s.section_id = section.id;
+                s.cases = [];
+            } else {
+                s.section_name = section.name;
+                s.section_id = section.id;
+                s.cases = filtered_cases;
+            }
+            completed_sections.push(s);
+        })
+        completed_data.sections = completed_sections;
+
         let casesReport = [];
-        this.currentCases = this.getCurrentCasesBySections(projectId, suiteId);
-        console.log(this.currentCases);
 
         run.runs.forEach(localRun => {
-            this.casesFromTR = this.currentCases.filter(obj => obj.section_name === localRun.spec.name)[0].cases;
+            this.casesFromTR = completed_data.sections.filter(s => s.section_name === localRun.spec.name)[0].cases;
             this.casesFromTR.forEach(caseTR => {
                 localRun.tests.forEach(caseLocal => {
-                    if (caseLocal.title.map((s) => {
-                        return s.trim()
-                    })[caseLocal.title.length - 1] === caseTR.title) {
-                        let statusCase;
-                        let errorString = '';
-                        if (caseLocal.state === 'failed') {
-                            statusCase = 5
-                            caseLocal.attempts.forEach(e => {
-                                errorString +=
-                                    e.error.name + "\n" +
-                                    e.error.message + "\n" +
-                                    e.error.stack + "\n" +
-                                    "=======================V \n\n\n"
-                            })
-                        } else if (caseLocal.state === 'passed') {
-                            statusCase = 1
-                            errorString = '';
-                        } else {
-                            statusCase = 2
-                            errorString = '';
-                        }
+                        if (caseLocal.title.map((s) => {
+                            return s.trim()
+                        })[caseLocal.title.length - 1] === caseTR.title) {
 
-                        let caseReport = {
-                            case_id: caseTR.id,
-                            status_id: statusCase,
-                            comment: errorString
+                            let errorString = 'Test was passed!'
+                            if (caseLocal.state === 'failed') {
+                                this.statusCase = 5
+                                caseLocal.attempts.forEach(e => {
+                                    errorString +=
+                                        e.error.name + "\n" +
+                                        e.error.message + "\n" +
+                                        e.error.stack + "\n" +
+                                        "=======================V \n\n\n"
+                                })
+                            }
+
+                            if (caseLocal.state === 'passed') {
+                                this.statusCase = 1
+                                errorString = '';
+                            }
+
+                            if (caseLocal.state === 'skipped') {
+                                this.statusCase = 2
+                                errorString = '';
+                            }
+
+                            let caseReport = {
+                                case_id: caseTR.id,
+                                status_id: this.statusCase,
+                                comment: errorString
+                            }
+                            casesReport.push(caseReport);
                         }
-                        casesReport.push(caseReport);
                     }
-                })
-
-
+                )
             })
         })
 
@@ -226,7 +272,7 @@ class TestRaiImporter {
         return currentCases;
     }
 
-    importStatusesToNewRun(closeRun) {
+    importStatusesToNewRun(closeRun, send_images) {
         let runs = this.getRuns(this._project.id);
 
         let date = new Date();
@@ -265,50 +311,52 @@ class TestRaiImporter {
         }
 
         this.sendResults(this._project.id, this._suite.id, runObj.id, this.run)
-        this.uploadScreenShotsToFailedTests();
+        this.uploadScreenShotsToFailedTests(send_images);
         this.closeRun(runObj.id, closeRun)
     }
 
-    uploadScreenShotsToFailedTests() {
-        let date = new Date();
-        let options = {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        };
+    uploadScreenShotsToFailedTests(send_images) {
+        if (send_images) {
+            let date = new Date();
+            let options = {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            };
 
-        let runName = "UI Test run [based on Cypress] " + date.toLocaleDateString("en-US", options);
-        let runs = this.getRuns(this._project.id);
-        let cases = this.getSuiteCases(this._project.id, this._suite.id);
+            let runName = "UI Test run [based on Cypress] " + date.toLocaleDateString("en-US", options);
+            let runs = this.getRuns(this._project.id);
+            let cases = this.getSuiteCases(this._project.id, this._suite.id);
 
-        let runObj;
-        if (runs.filter(r => r.name === runName).length === 1) {
-            runObj = runs.filter(r => r.name === runName)[0];
-        } else {
-            throw new Error("Cannot upload images to the failed tests, because the run " + runName + " does not found")
-        }
+            let runObj;
+            if (runs.filter(r => r.name === runName).length === 1) {
+                runObj = runs.filter(r => r.name === runName)[0];
+            } else {
+                throw new Error("Cannot upload images to the failed tests, because the run " + runName + " does not found")
+            }
 
-        this.run.runs.forEach(localData => {
-            localData.tests.forEach(caseLocal => {
-                if (caseLocal.state === 'failed') {
-                    let caseTRiD = cases.filter(caseTR => caseLocal.title.map((s) => {
-                        return s.trim()
-                    })[caseLocal.title.length - 1] === caseTR.title)[0];
-                    let results = this.getResultsByCase(runObj.id, caseTRiD.id, [5])
-                    if (caseLocal.attempts[0].screenshots.length !== 0 && results.length !== 0) {
-                        caseLocal.attempts[0].screenshots.forEach(screenShot => {
-                            if (fs.existsSync(screenShot.path)) {
-                                console.log("Upload screenshot to result " + results[0].id + " by path " + screenShot.path)
-                                this.attachToCaseResult(results[0].id, screenShot.path)
-                            } else {
-                                console.log("Not exist file by path " + screenShot.path)
-                            }
-                        })
+            this.run.runs.forEach(localData => {
+                localData.tests.forEach(caseLocal => {
+                    if (caseLocal.state === 'failed') {
+                        let caseTRiD = cases.filter(caseTR => caseLocal.title.map((s) => {
+                            return s.trim()
+                        })[caseLocal.title.length - 1] === caseTR.title)[0];
+                        let results = this.getResultsByCase(runObj.id, caseTRiD.id, [5])
+                        if (caseLocal.attempts[0].screenshots.length !== 0 && results.length !== 0) {
+                            caseLocal.attempts[0].screenshots.forEach(screenShot => {
+                                if (fs.existsSync(screenShot.path)) {
+                                    console.log("Upload screenshot to result " + results[0].id + " by path " + screenShot.path)
+                                    this.attachToCaseResult(results[0].id, screenShot.path)
+                                } else {
+                                    console.log("Not exist file by path " + screenShot.path)
+                                }
+                            })
+                        }
                     }
-                }
 
-            });
-        })
+                });
+            })
+        }
     }
 
     //console command:  node -r esm TestRaiImporter.js
