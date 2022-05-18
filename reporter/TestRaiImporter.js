@@ -225,21 +225,6 @@ class TestRaiImporter {
         let cases_from_suite = this.getSuiteCases(this._project.id, this._suite.id)
 
         let completed_data = {};
-        completed_data.startedTestsAt = this.run.startedTestsAt;
-        completed_data.endedTestsAt = this.run.endedTestsAt;
-        completed_data.totalTests = this.run.totalTests;
-        completed_data.browserName = this.run.browserName;
-        completed_data.browserVersion = this.run.browserVersion;
-        completed_data.osVersion = this.run.osVersion;
-        completed_data.cypressVersion = this.run.cypressVersion;
-        completed_data.runUrl = this.run.runUrl;
-        completed_data.config.resolvedNodeVersion = this.run.config.resolvedNodeVersion;
-        completed_data.config.viewportWidth = this.run.config.viewportWidth;
-        completed_data.config.viewportHeight = this.run.config.viewportHeight;
-        completed_data.config.env.WEB_BASE_URL = this.run.config.env.WEB_BASE_URL;
-        completed_data.config.env.ADMIN_BASE_URL = this.run.config.env.ADMIN_BASE_URL;
-        completed_data.config.env.LOGIN = this.run.config.env.LOGIN;
-
         let completed_sections = [];
 
         completed_data.startedTestsAt = this.run.startedTestsAt;
