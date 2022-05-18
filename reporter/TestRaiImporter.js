@@ -235,12 +235,6 @@ class TestRaiImporter {
         completed_data.osVersion = this.run.osVersion;
         completed_data.cypressVersion = this.run.cypressVersion;
         completed_data.runUrl = this.run.runUrl;
-        completed_data.config.resolvedNodeVersion = this.run.config.resolvedNodeVersion;
-        completed_data.config.viewportWidth = this.run.config.viewportWidth;
-        completed_data.config.viewportHeight = this.run.config.viewportHeight;
-        completed_data.config.env.WEB_BASE_URL = this.run.config.env.WEB_BASE_URL;
-        completed_data.config.env.ADMIN_BASE_URL = this.run.config.env.ADMIN_BASE_URL;
-        completed_data.config.env.LOGIN = this.run.config.env.LOGIN;
 
         this.run.runs.forEach(r => {
             let filtered_section = sections.filter(section => section.name === r.spec.name);
@@ -553,12 +547,6 @@ class TestRaiImporter {
             let browserName = "Browser: ".concat(info.browserName, " ", info.browserVersion);
             let os = "OS: ".concat(info.osName, " ", info.osVersion);
             let cypressVersion = "Cypress: ".concat(info.cypressVersion);
-            let nodeVersion = "Cypress: ".concat(info.config.resolvedNodeVersion);
-            let screenSize = "Screen size: Width: ".concat(info.config.viewportWidth, " Height: ", info.config.viewportHeight);
-            let envData = "WEB_BASE_URL: " + info.config.env.WEB_BASE_URL +
-                "\n" + " ADMIN_BASE_URL: " + info.config.env.ADMIN_BASE_URL +
-                "\n" + " LOGIN: " + info.config.env.LOGIN +
-                "\n" + " PASS: ********* ";
 
 
             let runDescription = timeStampRun + "\n" +
@@ -566,10 +554,7 @@ class TestRaiImporter {
                 totalTests + "\n" +
                 browserName + "\n" +
                 os + "\n" +
-                cypressVersion + "\n" +
-                nodeVersion + "\n" +
-                screenSize + "\n" +
-                envData + "\n";
+                cypressVersion + "\n";
 
 
             let runObj;
