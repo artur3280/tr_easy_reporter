@@ -4,6 +4,7 @@ const credentials = require("../../../tr_credentials.json");
 const fs = require('fs');
 const json = require('json-update');
 const sleep = require('sleep');
+const {resolve} = require("path");
 
 class TestRaiImporter {
     constructor(run) {
@@ -225,6 +226,21 @@ class TestRaiImporter {
 
         let completed_data = {};
         let completed_sections = [];
+
+        completed_data.startedTestsAt = this.run.startedTestsAt;
+        completed_data.endedTestsAt = this.run.endedTestsAt;
+        completed_data.totalTests = this.run.totalTests;
+        completed_data.browserName = this.run.browserName;
+        completed_data.browserVersion = this.run.browserVersion;
+        completed_data.osVersion = this.run.osVersion;
+        completed_data.cypressVersion = this.run.cypressVersion;
+        completed_data.runUrl = this.run.runUrl;
+        completed_data.config.resolvedNodeVersion = this.run.config.resolvedNodeVersion;
+        completed_data.config.viewportWidth = this.run.config.viewportWidth;
+        completed_data.config.viewportHeight = this.run.config.viewportHeight;
+        completed_data.config.env.WEB_BASE_URL = this.run.config.env.WEB_BASE_URL;
+        completed_data.config.env.ADMIN_BASE_URL = this.run.config.env.ADMIN_BASE_URL;
+        completed_data.config.env.LOGIN = this.run.config.env.LOGIN;
 
         this.run.runs.forEach(r => {
             let filtered_section = sections.filter(section => section.name === r.spec.name);
@@ -515,54 +531,65 @@ class TestRaiImporter {
     }
 
     importStatusesToNewRunFromArtifacts(closeRun, fromFolder) {
-        let runs = this.getRuns(this._project.id);
-
-        let date = new Date();
-        let options = {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        };
-        let runName = "UI Test run [based on Cypress] " + date.toLocaleDateString("en-US", options);
-        let timeStampRun = "Started/Ended: " + this.run.startedTestsAt + "-" + this.run.endedTestsAt;
-        let browserName = "Browser: " + this.run.browserName + " " + this.run.browserVersion;
-        let os = "OS: " + this.run.osName + " " + this.run.osVersion;
-        let cypressVersion = "Cypress: " + this.run.cypressVersion;
-        let nodeVersion = "Cypress: " + this.run.config.resolvedNodeVersion;
-        let screenSize = "Screen size: Width: " + this.run.config.viewportWidth + " Height: " + this.run.config.viewportHeight;
-        let envData = "WEB_BASE_URL: " + this.run.config.env.WEB_BASE_URL +
-            "\n" + " ADMIN_BASE_URL: " + this.run.config.env.ADMIN_BASE_URL +
-            "\n" + " LOGIN: " + this.run.config.env.LOGIN +
-            "\n" + " PASS: ********* ";
-
-        let runDescription = timeStampRun + "\n" +
-            browserName + "\n" +
-            os + "\n" +
-            cypressVersion + "\n" +
-            nodeVersion + "\n" +
-            screenSize + "\n" +
-            envData + "\n";
-
-
-        let runObj;
-        if (runs.filter(r => r.name === runName).length === 0) {
-            runObj = this.createNewRun(this._project.id, this._suite.id, runName, runDescription);
-        } else {
-            runObj = runs.filter(r => r.name === runName)[0];
-            this.updateRun(runObj.id, this._suite.id, runName, runDescription)
-        }
-
         let resolve = require('path').resolve
         fs.readdir(fromFolder, (err, files) => {
+            let runs = this.getRuns(this._project.id);
+
+            let date = new Date();
+            let options = {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+            };
+
+            let absolute_path_to_file = resolve(fromFolder.concat(files[0]));
+            console.log(absolute_path_to_file);
+            let info = require(absolute_path_to_file);
+
+            let runName = "UI Test run [based on Cypress] ".concat(date.toLocaleDateString("en-US", options));
+            let timeStampRun = "Started/Ended: ".concat(info.startedTestsAt, '-', info.endedTestsAt);
+            let totalTests = "Total tests: ".concat(info.totalTests);
+            let runUrl = "Run url: ".concat(info.runUrl);
+            let browserName = "Browser: ".concat(info.browserName, " ", info.browserVersion);
+            let os = "OS: ".concat(info.osName, " ", info.osVersion);
+            let cypressVersion = "Cypress: ".concat(info.cypressVersion);
+            let nodeVersion = "Cypress: ".concat(info.config.resolvedNodeVersion);
+            let screenSize = "Screen size: Width: ".concat(info.config.viewportWidth, " Height: ", info.config.viewportHeight);
+            let envData = "WEB_BASE_URL: " + info.config.env.WEB_BASE_URL +
+                "\n" + " ADMIN_BASE_URL: " + info.config.env.ADMIN_BASE_URL +
+                "\n" + " LOGIN: " + info.config.env.LOGIN +
+                "\n" + " PASS: ********* ";
+
+
+            let runDescription = timeStampRun + "\n" +
+                runUrl + "\n" +
+                totalTests + "\n" +
+                browserName + "\n" +
+                os + "\n" +
+                cypressVersion + "\n" +
+                nodeVersion + "\n" +
+                screenSize + "\n" +
+                envData + "\n";
+
+
+            let runObj;
+            if (runs.filter(r => r.name === runName).length === 0) {
+                runObj = this.createNewRun(this._project.id, this._suite.id, runName, runDescription);
+            } else {
+                runObj = runs.filter(r => r.name === runName)[0];
+                this.updateRun(runObj.id, this._suite.id, runName, runDescription)
+            }
+
+
             files.forEach(file => {
                 let absolute_path_to_file = resolve(fromFolder.concat(file));
                 console.log(absolute_path_to_file);
                 let data_from_file = require(absolute_path_to_file);
                 this.sendResultsFromArtifacts(this._project.id, this._suite.id, runObj.id, data_from_file)
             });
-        });
 
-        this.closeRun(runObj.id, closeRun)
+            this.closeRun(runObj.id, closeRun)
+        });
     }
 
     uploadScreenShotsToFailedTests(send_images) {
