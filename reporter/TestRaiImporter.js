@@ -4,7 +4,6 @@ const credentials = require("../../../tr_credentials.json");
 const fs = require('fs');
 const json = require('json-update');
 const sleep = require('sleep');
-let resolve = require('path').resolve
 
 class TestRaiImporter {
     constructor(run) {
@@ -226,15 +225,6 @@ class TestRaiImporter {
 
         let completed_data = {};
         let completed_sections = [];
-
-        completed_data.startedTestsAt = this.run.startedTestsAt;
-        completed_data.endedTestsAt = this.run.endedTestsAt;
-        completed_data.totalTests = this.run.totalTests;
-        completed_data.browserName = this.run.browserName;
-        completed_data.browserVersion = this.run.browserVersion;
-        completed_data.osVersion = this.run.osVersion;
-        completed_data.cypressVersion = this.run.cypressVersion;
-        completed_data.runUrl = this.run.runUrl;
 
         this.run.runs.forEach(r => {
             let filtered_section = sections.filter(section => section.name === r.spec.name);
@@ -525,60 +515,35 @@ class TestRaiImporter {
     }
 
     importStatusesToNewRunFromArtifacts(closeRun, fromFolder) {
+        let runs = this.getRuns(this._project.id);
 
+        let date = new Date();
+        let options = {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        };
+        let runName = "UI Test run [based on Cypress] " + date.toLocaleDateString("en-US", options);
+
+        let runObj;
+        if (runs.filter(r => r.name === runName).length === 0) {
+            runObj = this.createNewRun(this._project.id, this._suite.id, runName, '');
+        } else {
+            runObj = runs.filter(r => r.name === runName)[0];
+            this.updateRun(runObj.id, this._suite.id, runName, '')
+        }
+
+        let resolve = require('path').resolve
         fs.readdir(fromFolder, (err, files) => {
-
-            let runs = this.getRuns(this._project.id);
-
-            let date = new Date();
-            let options = {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-            };
-
-            this.runName = "UI Test run [based on Cypress] ".concat(date.toLocaleDateString("en-US", options));
-
-            let absolute_path_to_file = resolve(fromFolder.concat(files[0]));
-            console.log(absolute_path_to_file);
-            let info = require(absolute_path_to_file);
-
-            let timeStampRun = "Started/Ended: ".concat(info.startedTestsAt, '-', info.endedTestsAt);
-            this.totalTests = "Total tests: ".concat(info.totalTests);
-            if (this.runUrl) {
-                this.runUrl = "Run url: ".concat(info.runUrl);
-            } else {
-                this.runUrl = '';
-            }
-            let browserName = "Browser: ".concat(info.browserName, " ", info.browserVersion);
-            let cypressVersion = "Cypress: ".concat(info.cypressVersion);
-
-            this.runDescription = timeStampRun + "\n" +
-                this.totalTests + "\n" +
-                browserName + "\n" +
-                this.runUrl + "\n" +
-                cypressVersion + "\n";
-
-            let runObj;
-            if (runs.filter(r => r.name === this.runName).length === 0) {
-                runObj = this.createNewRun(this._project.id, this._suite.id, this.runName, this.runDescription);
-            } else {
-                runObj = runs.filter(r => r.name === this.runName)[0];
-                this.updateRun(runObj.id, this._suite.id, this.runName, this.runDescription)
-            }
-
-
             files.forEach(file => {
                 let absolute_path_to_file = resolve(fromFolder.concat(file));
                 console.log(absolute_path_to_file);
                 let data_from_file = require(absolute_path_to_file);
                 this.sendResultsFromArtifacts(this._project.id, this._suite.id, runObj.id, data_from_file)
             });
-
-            this.closeRun(runObj.id, closeRun)
         });
 
-
+        this.closeRun(runObj.id, closeRun)
     }
 
     uploadScreenShotsToFailedTests(send_images) {
