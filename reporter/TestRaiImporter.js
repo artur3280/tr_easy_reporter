@@ -2,6 +2,8 @@
 const TestRailConnector = require("./TestRailConnector");
 const credentials = require("../../../tr_credentials.json");
 const fs = require('fs');
+const json = require('json-update');
+const sleep = require('sleep');
 
 class TestRaiImporter {
     constructor(run) {
@@ -187,6 +189,203 @@ class TestRaiImporter {
         });
     }
 
+    updateSuiteCasesFromArtifacts(fromFolder) {
+        let resolve = require('path').resolve
+        fs.readdir(fromFolder, (err, files) => {
+            files.forEach(file => {
+                let absolute_path_to_file = resolve(fromFolder.concat(file));
+                console.log(absolute_path_to_file);
+                let data_from_file = require(absolute_path_to_file);
+                let failed_sections = data_from_file.sections.filter(section =>
+                    section.isCreated === false ||
+                    section.cases.filter(c => c.isCreated === false).length > 0);
+
+                for (let failedSection of failed_sections) {
+                    if (!failedSection.isCreated) {
+                        let section_id = this.createNewSection(this._project.id, this._suite.id, failedSection.section_name).id;
+                        failedSection.cases.forEach(c => {
+                            this.createNewCase(section_id, c.title.trim(), 'You can see more details on the Dashboard.')
+                        })
+                    } else {
+                        let failed_cases = failedSection.cases.filter(c => c.isCreated === false);
+                        if (failed_cases.length > 0) {
+                            for (let failedCase of failed_cases) {
+                                this.createNewCase(failedSection.section_id, failedCase.title.trim(), 'You can see more details on the Dashboard.')
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    saveArtifact(saveTo) {
+        let sections = this.getSuiteSections(this._project.id, this._suite.id);
+        let cases_from_suite = this.getSuiteCases(this._project.id, this._suite.id)
+
+        let completed_data = {};
+        let completed_sections = [];
+
+        this.run.runs.forEach(r => {
+            let filtered_section = sections.filter(section => section.name === r.spec.name);
+
+            let s = {};
+            if (filtered_section.length === 0) {
+                let cases = [];
+                s.section_name = r.spec.name;
+                s.section_id = null;
+                s.isCreated = false;
+                s.cases_length = r.tests.length;
+
+                r.tests.forEach(test => {
+                    let runCase = {};
+                    runCase.title = test.title[test.title.length - 1];
+                    runCase.state_string = test.state;
+                    runCase.isCreated = false;
+
+                    if (test.state === 'passed') {
+                        runCase.state_id = 1;
+                    }
+
+                    if (test.state === 'skipped') {
+                        runCase.state_id = 2;
+                    }
+
+                    if (test.state === 'failed') {
+                        runCase.state_id = 5;
+                    }
+
+                    if (test.state === 'failed' && test.attempts[0].error !== null) {
+                        runCase.error_message = test.attempts[0].error.message;
+                    }
+
+                    if (test.state !== 'passed' && test.attempts[0].screenshots.length !== 0) {
+                        runCase.screenshots = test.attempts[0].screenshots;
+                    }
+
+                    cases.push(runCase);
+                })
+                s.cases = cases;
+            } else {
+                let filtered_cases = cases_from_suite.filter(c => c.section_id === filtered_section[0].id)
+
+                let cases = [];
+                s.section_name = filtered_section[0].name;
+                s.section_id = filtered_section[0].id;
+                s.isCreated = true;
+                s.cases_length = r.tests.length;
+
+                r.tests.forEach(test => {
+                    let runCase = {};
+                    runCase.title = test.title[test.title.length - 1];
+                    runCase.state_string = test.state;
+
+                    let found_case = filtered_cases.filter(c => c.title === test.title.map((s) => {
+                        return s.trim()
+                    })[test.title.length - 1]);
+
+                    if (found_case.length === 0) {
+                        runCase.isCreated = false;
+                    } else {
+                        runCase.isCreated = true;
+                    }
+
+                    if (test.state === 'passed') {
+                        runCase.state_id = 1;
+                    }
+
+                    if (test.state === 'skipped') {
+                        runCase.state_id = 2;
+                    }
+
+                    if (test.state === 'failed') {
+                        runCase.state_id = 5;
+                    }
+
+                    if (test.state !== 'passed' && test.attempts[0].error !== null) {
+                        runCase.error_message = test.attempts[0].error.message;
+                    }
+
+                    if (test.state !== 'passed' && test.attempts[0].screenshots.length !== 0) {
+                        runCase.screenshots = test.attempts[0].screenshots;
+                    }
+
+                    cases.push(runCase);
+                })
+                s.cases = cases;
+            }
+            completed_sections.push(s)
+        });
+        completed_data.sections = completed_sections;
+
+        json.update(saveTo.concat('run_data_', new Date().getMilliseconds(), '.json'), completed_data);
+    }
+
+    sendResultsFromArtifacts(projectId, suiteId, runId, dataFromArtifact) {
+        let sections = this.getSuiteSections(this._project.id, this._suite.id);
+        let cases_from_suite = this.getSuiteCases(this._project.id, this._suite.id)
+
+        let completed_data = {};
+        let completed_sections = [];
+
+        sections.forEach(section => {
+            let filtered_cases = cases_from_suite.filter(c => c.section_id === section.id)
+            let s = {};
+            if (filtered_cases.length === 0) {
+                s.section_name = section.name;
+                s.section_id = section.id;
+                s.cases = [];
+            } else {
+                s.section_name = section.name;
+                s.section_id = section.id;
+                s.cases = filtered_cases;
+            }
+            completed_sections.push(s);
+        })
+        completed_data.sections = completed_sections;
+
+        let casesReport = [];
+
+        dataFromArtifact.sections.forEach(localRun => {
+            this.casesFromTR = completed_data.sections.filter(s => s.section_name === localRun.section_name)[0].cases;
+            this.casesFromTR.forEach(caseTR => {
+                let caseLocal = localRun.cases.filter(c => c.title.trim() === caseTR.title)[0];
+                let errorString = 'Test was passed!';
+
+                if (caseLocal.state_string === 'failed') {
+                    this.statusCase = caseLocal.state_id;
+                    errorString = caseLocal.error_message
+                }
+
+                if (caseLocal.state_string === 'passed') {
+                    this.statusCase = caseLocal.state_id;
+                    errorString = 'Looks good!';
+                }
+
+                if (caseLocal.state_string === 'skipped') {
+                    this.statusCase = caseLocal.state_id;
+                    errorString = 'Case was skipped!';
+                }
+
+                let caseReport = {
+                    case_id: caseTR.id,
+                    status_id: this.statusCase,
+                    comment: errorString
+                }
+                casesReport.push(caseReport);
+            })
+        })
+
+        let n = 100;
+        let temp = [];
+        for (let i = 0; i < casesReport.length; i += n) {
+            casesReport.slice(i, i + n).forEach(c => console.log("Send results for " + c.case_id + " to run:" + runId + " by status " + c.status_id));
+            this.tr.addResultsForCases(runId, casesReport.slice(i, i + n));
+            console.log('Wait 15 seconds')
+            sleep.sleep(15);
+        }
+    }
+
     sendResults(projectId, suiteId, runId, run) {
         let sections = this.getSuiteSections(this._project.id, this._suite.id);
         let cases_from_suite = this.getSuiteCases(this._project.id, this._suite.id)
@@ -315,6 +514,57 @@ class TestRaiImporter {
         this.closeRun(runObj.id, closeRun)
     }
 
+    importStatusesToNewRunFromArtifacts(closeRun, fromFolder) {
+        let runs = this.getRuns(this._project.id);
+
+        let date = new Date();
+        let options = {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        };
+        let runName = "UI Test run [based on Cypress] " + date.toLocaleDateString("en-US", options);
+        let timeStampRun = "Started/Ended: " + this.run.startedTestsAt + "-" + this.run.endedTestsAt;
+        let browserName = "Browser: " + this.run.browserName + " " + this.run.browserVersion;
+        let os = "OS: " + this.run.osName + " " + this.run.osVersion;
+        let cypressVersion = "Cypress: " + this.run.cypressVersion;
+        let nodeVersion = "Cypress: " + this.run.config.resolvedNodeVersion;
+        let screenSize = "Screen size: Width: " + this.run.config.viewportWidth + " Height: " + this.run.config.viewportHeight;
+        let envData = "WEB_BASE_URL: " + this.run.config.env.WEB_BASE_URL +
+            "\n" + " ADMIN_BASE_URL: " + this.run.config.env.ADMIN_BASE_URL +
+            "\n" + " LOGIN: " + this.run.config.env.LOGIN +
+            "\n" + " PASS: ********* ";
+
+        let runDescription = timeStampRun + "\n" +
+            browserName + "\n" +
+            os + "\n" +
+            cypressVersion + "\n" +
+            nodeVersion + "\n" +
+            screenSize + "\n" +
+            envData + "\n";
+
+
+        let runObj;
+        if (runs.filter(r => r.name === runName).length === 0) {
+            runObj = this.createNewRun(this._project.id, this._suite.id, runName, runDescription);
+        } else {
+            runObj = runs.filter(r => r.name === runName)[0];
+            this.updateRun(runObj.id, this._suite.id, runName, runDescription)
+        }
+
+        let resolve = require('path').resolve
+        fs.readdir(fromFolder, (err, files) => {
+            files.forEach(file => {
+                let absolute_path_to_file = resolve(fromFolder.concat(file));
+                console.log(absolute_path_to_file);
+                let data_from_file = require(absolute_path_to_file);
+                this.sendResultsFromArtifacts(this._project.id, this._suite.id, runObj.id, data_from_file)
+            });
+        });
+
+        this.closeRun(runObj.id, closeRun)
+    }
+
     uploadScreenShotsToFailedTests(send_images) {
         if (send_images) {
             let date = new Date();
@@ -364,6 +614,12 @@ class TestRaiImporter {
     // tr.updateSuiteCases();
     // tr.importStatusesToNewRun();
     //file example /plugins/tr_integration/run_all_cases.json
+
+    // import js from "../../../fixtures/add_metrics.json";
+    // let tr = new TestRaiImporter(js);
+    // tr.saveArtifact('./artifact/')
+    // tr.updateSuiteCasesFromArtifacts('./artifact/');
+    // tr.importStatusesToNewRunFromArtifacts(false, './artifact/');
 }
 
 module.exports = TestRaiImporter;

@@ -1,5 +1,20 @@
 # TestRail reporter for Cypress
 ## _Updates_
+### Version 0.7.0
+* Added new methods:
+```sh
+let tr = new TestRaiImporter(run_data);
+
+// Save run data to the local folder 
+tr.saveArtifact('./artifact/')
+
+// Get saved data and deploy to TR 
+tr.updateSuiteCasesFromArtifacts('./artifact/');
+
+// Update satuses from file 
+tr.importStatusesToNewRunFromArtifacts(false, './artifact/');
+```
+* Import optimization 
 ### Version: 0.5.0
 * Optimize imports data to TR
 * Optimize all requests
