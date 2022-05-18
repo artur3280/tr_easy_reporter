@@ -233,12 +233,6 @@ class TestRaiImporter {
         completed_data.osVersion = this.run.osVersion;
         completed_data.cypressVersion = this.run.cypressVersion;
         completed_data.runUrl = this.run.runUrl;
-        completed_data.config.resolvedNodeVersion = this.run.config.resolvedNodeVersion;
-        completed_data.config.viewportWidth = this.run.config.viewportWidth;
-        completed_data.config.viewportHeight = this.run.config.viewportHeight;
-        completed_data.config.env.WEB_BASE_URL = this.run.config.env.WEB_BASE_URL;
-        completed_data.config.env.ADMIN_BASE_URL = this.run.config.env.ADMIN_BASE_URL;
-        completed_data.config.env.LOGIN = this.run.config.env.LOGIN;
 
         let completed_sections = [];
 
