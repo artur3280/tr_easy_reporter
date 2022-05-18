@@ -4,7 +4,7 @@ const credentials = require("../../../tr_credentials.json");
 const fs = require('fs');
 const json = require('json-update');
 const sleep = require('sleep');
-const {resolve} = require("path");
+let resolve = require('path').resolve
 
 class TestRaiImporter {
     constructor(run) {
@@ -525,8 +525,9 @@ class TestRaiImporter {
     }
 
     importStatusesToNewRunFromArtifacts(closeRun, fromFolder) {
-        let resolve = require('path').resolve
+
         fs.readdir(fromFolder, (err, files) => {
+
             let runs = this.getRuns(this._project.id);
 
             let date = new Date();
@@ -536,33 +537,34 @@ class TestRaiImporter {
                 day: 'numeric',
             };
 
+            this.runName = "UI Test run [based on Cypress] ".concat(date.toLocaleDateString("en-US", options));
+
             let absolute_path_to_file = resolve(fromFolder.concat(files[0]));
             console.log(absolute_path_to_file);
             let info = require(absolute_path_to_file);
 
-            let runName = "UI Test run [based on Cypress] ".concat(date.toLocaleDateString("en-US", options));
             let timeStampRun = "Started/Ended: ".concat(info.startedTestsAt, '-', info.endedTestsAt);
-            let totalTests = "Total tests: ".concat(info.totalTests);
-            let runUrl = "Run url: ".concat(info.runUrl);
+            this.totalTests = "Total tests: ".concat(info.totalTests);
+            if (this.runUrl) {
+                this.runUrl = "Run url: ".concat(info.runUrl);
+            } else {
+                this.runUrl = '';
+            }
             let browserName = "Browser: ".concat(info.browserName, " ", info.browserVersion);
-            let os = "OS: ".concat(info.osName, " ", info.osVersion);
             let cypressVersion = "Cypress: ".concat(info.cypressVersion);
 
-
-            let runDescription = timeStampRun + "\n" +
-                runUrl + "\n" +
-                totalTests + "\n" +
+            this.runDescription = timeStampRun + "\n" +
+                this.totalTests + "\n" +
                 browserName + "\n" +
-                os + "\n" +
+                this.runUrl + "\n" +
                 cypressVersion + "\n";
 
-
             let runObj;
-            if (runs.filter(r => r.name === runName).length === 0) {
-                runObj = this.createNewRun(this._project.id, this._suite.id, runName, runDescription);
+            if (runs.filter(r => r.name === this.runName).length === 0) {
+                runObj = this.createNewRun(this._project.id, this._suite.id, this.runName, this.runDescription);
             } else {
-                runObj = runs.filter(r => r.name === runName)[0];
-                this.updateRun(runObj.id, this._suite.id, runName, runDescription)
+                runObj = runs.filter(r => r.name === this.runName)[0];
+                this.updateRun(runObj.id, this._suite.id, this.runName, this.runDescription)
             }
 
 
@@ -575,6 +577,8 @@ class TestRaiImporter {
 
             this.closeRun(runObj.id, closeRun)
         });
+
+
     }
 
     uploadScreenShotsToFailedTests(send_images) {
