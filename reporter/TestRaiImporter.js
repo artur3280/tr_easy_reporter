@@ -205,7 +205,7 @@ class TestRaiImporter {
                     if (!failedSection.isCreated) {
                         let section_id = this.createNewSection(this._project.id, this._suite.id, failedSection.section_name).id;
                         failedSection.cases.forEach(c => {
-                            this.createNewCase(section_id, c.title.trim(), 'You can see more details on the Dashboard.')
+                            this.createNewCase(section_id, c.title.trim(), 'You can see more details on the Dashboard.');
                         })
                     } else {
                         let failed_cases = failedSection.cases.filter(c => c.isCreated === false);
@@ -215,6 +215,7 @@ class TestRaiImporter {
                             }
                         }
                     }
+                    sleep.sleep(2);
                 }
             });
         });
@@ -341,15 +342,11 @@ class TestRaiImporter {
         sections.forEach(section => {
             let filtered_cases = cases_from_suite.filter(c => c.section_id === section.id)
             let s = {};
-            if (filtered_cases.length === 0) {
-                s.section_name = section.name;
-                s.section_id = section.id;
-                s.cases = [];
-            } else {
-                s.section_name = section.name;
-                s.section_id = section.id;
+            s.section_name = section.name;
+            s.section_id = section.id;
+            if (filtered_cases)
                 s.cases = filtered_cases;
-            }
+
             completed_sections.push(s);
         })
         completed_data.sections = completed_sections;
