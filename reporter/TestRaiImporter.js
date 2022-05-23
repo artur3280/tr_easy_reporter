@@ -215,7 +215,6 @@ class TestRaiImporter {
                             }
                         }
                     }
-                    sleep.sleep(5);
                 }
             });
         });
