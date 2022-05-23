@@ -2,6 +2,7 @@
 const qs = require('querystring');
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const unirest = require('unirest');
+const sleep = require('sleep');
 
 class TestRailConnector {
     constructor(options) {
@@ -39,7 +40,25 @@ class TestRailConnector {
         xmlHttp.setRequestHeader('Accept', 'application/json')
         xmlHttp.setRequestHeader('x-api-ident', 'beta')
         xmlHttp.send(body);
-        if (xmlHttp.status !== 200) throw new Error(xmlHttp.status + ":" + xmlHttp.statusText + "\n " + xmlHttp.responseText)
+
+        if (xmlHttp.status === 500) {
+            for (let i = 0; i < 5; i++) {
+                console.log("Retry requests with waiter as 5 sec.....")
+                sleep.sleep(5);
+                xmlHttp.send(body)
+                if (xmlHttp.status !== 500 && xmlHttp.status === 200) {
+                    break;
+                }
+            }
+        } else if (xmlHttp.status === 429) {
+            console.log('Account is undergoing daily maintenance.')
+            sleep.sleep(60);
+            xmlHttp.send(body)
+            if (xmlHttp.status !== 200) throw new Error(xmlHttp.status + ":" + xmlHttp.statusText + "\n " + xmlHttp.responseText)
+        } else if (xmlHttp.status !== 200) {
+            throw new Error(xmlHttp.status + ":" + xmlHttp.statusText + "\n " + xmlHttp.responseText)
+        }
+
         return JSON.parse(xmlHttp.responseText);
     }
 
