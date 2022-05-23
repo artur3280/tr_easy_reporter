@@ -45,7 +45,18 @@ class TestRailConnector {
             for (let i = 0; i < 5; i++) {
                 console.log("Retry requests with waiter as 5 sec.....")
                 sleep.sleep(5);
-                xmlHttp.send(body)
+                let xmlHttp = new XMLHttpRequest();
+                if (queryVariables != null) {
+                    url += '&' + qs.stringify(queryVariables);
+                } else {
+                    url += ''
+                }
+
+                xmlHttp.open(method, url, false, this.user, this.password);
+                xmlHttp.setRequestHeader('Content-Type', 'application/json')
+                xmlHttp.setRequestHeader('Accept', 'application/json')
+                xmlHttp.setRequestHeader('x-api-ident', 'beta')
+                xmlHttp.send(body);
                 if (xmlHttp.status !== 500 && xmlHttp.status === 200) {
                     break;
                 }
@@ -53,7 +64,18 @@ class TestRailConnector {
         } else if (xmlHttp.status === 429) {
             console.log('Account is undergoing daily maintenance.')
             sleep.sleep(60);
-            xmlHttp.send(body)
+            let xmlHttp = new XMLHttpRequest();
+            if (queryVariables != null) {
+                url += '&' + qs.stringify(queryVariables);
+            } else {
+                url += ''
+            }
+
+            xmlHttp.open(method, url, false, this.user, this.password);
+            xmlHttp.setRequestHeader('Content-Type', 'application/json')
+            xmlHttp.setRequestHeader('Accept', 'application/json')
+            xmlHttp.setRequestHeader('x-api-ident', 'beta')
+            xmlHttp.send(body);
             if (xmlHttp.status !== 200) throw new Error(xmlHttp.status + ":" + xmlHttp.statusText + "\n " + xmlHttp.responseText)
         } else if (xmlHttp.status !== 200) {
             throw new Error(xmlHttp.status + ":" + xmlHttp.statusText + "\n " + xmlHttp.responseText)
