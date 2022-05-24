@@ -54,6 +54,14 @@ class TestRaiImporter {
             throw new Error('Project id or Suite id eqls null')
     }
 
+    getSuiteCases(projectId, suiteId, offset) {
+        console.log("Get case list from suite " + suiteId + " in " + projectId);
+        if (projectId && suiteId)
+            return this.tr.getCases(projectId, {suite_id: suiteId, offset: offset}).cases;
+        else
+            throw new Error('Project id or Suite id eqls null')
+    }
+
     getSectionCases(projectId, suiteId, sectionId) {
         console.log("Get case list from section " + sectionId + " in " + suiteId);
         if (projectId && suiteId)
@@ -66,6 +74,14 @@ class TestRaiImporter {
         console.log("Get section list from suite " + suiteId + " in " + projectId);
         if (projectId && suiteId)
             return this.tr.getSections(projectId, {suite_id: suiteId}).sections;
+        else
+            throw new Error('Project id or Suite id eqls null')
+    }
+
+    getSuiteSections(projectId, suiteId, offset) {
+        console.log("Get section list from suite " + suiteId + " in " + projectId);
+        if (projectId && suiteId)
+            return this.tr.getSections(projectId, {suite_id: suiteId, offset: offset}).sections;
         else
             throw new Error('Project id or Suite id eqls null')
     }
@@ -90,14 +106,16 @@ class TestRaiImporter {
         return this.tr.addCase(sectionId, body);
     }
 
-    createNewSection(projectId, suiteId, name) {
-        console.log("Add new section: " + name + " in project/suite " + projectId + '/' + suiteId);
+    createNewSection(projectId, suiteId, name, parent_id) {
+        console.log("Add new section: " + name + " in project/suite " + projectId + '/' + suiteId + ' for parent section ' + parent_id);
         let body = {
             name: name,
-            suite_id: suiteId
+            suite_id: suiteId,
+            parent_id: parent_id
         }
         return this.tr.addSection(projectId, body);
     }
+
 
     createNewRun(projectId, suiteId, name, description) {
         console.log("Create new  run: " + name + " in project " + projectId);
@@ -220,9 +238,58 @@ class TestRaiImporter {
         });
     }
 
+    creatingMainSections(fromFolder) {
+        let resolve = require('path').resolve
+        fs.readdir(fromFolder, (err, files) => {
+            files.forEach(file => {
+                let absolute_path_to_file = resolve(fromFolder.concat(file));
+                console.log(absolute_path_to_file);
+                let data_from_file = require(absolute_path_to_file);
+
+                let sections_from_server = this.getAllSections()
+
+
+                data_from_file.sections.forEach(s => {
+                    console.log(s.section_name.split('/'))
+                    let section_path = s.section_name.split('/');
+
+                    this.parent_section_id = null;
+                    for (let i = 0; i < section_path.length; i++) {
+                        let created_sections = sections_from_server.filter(s => s.name === section_path[i]);
+
+                        if (created_sections.length > 0) {
+                            continue;
+                        }
+
+                        if (section_path.length === 1) {
+                            this.parent_section_id = null;
+                        } else {
+                            if (section_path[i].includes('.spec.js')) {
+                                let posion_s = section_path.indexOf(section_path[i]);
+                                if (posion_s !== '-1') {
+                                    let created_sections = sections_from_server.filter(s => s.name === section_path[posion_s - 1]);
+                                    this.parent_section_id = created_sections[0].id
+                                }
+                            }
+
+                        }
+
+                        this.section_body = this.createNewSection(this._project.id, this._suite.id, section_path[i], this.parent_section_id);
+                        this.parent_section_id = this.section_body.id;
+                        this.section_body.created_from_script = true;
+                        sections_from_server.push(this.section_body)
+                    }
+                })
+
+                console.log(sections_from_server);
+            });
+        });
+
+    }
+
     saveArtifact(saveTo) {
-        let sections = this.getSuiteSections(this._project.id, this._suite.id);
-        let cases_from_suite = this.getSuiteCases(this._project.id, this._suite.id)
+        let sections = this.getAllSections();
+        let cases_from_suite = this.getAllCases();
 
         let completed_data = {};
         completed_data.startedTestsAt = this.run.startedTestsAt;
@@ -249,7 +316,12 @@ class TestRaiImporter {
 
                 r.tests.forEach(test => {
                     let runCase = {};
-                    runCase.title = test.title[test.title.length - 1];
+
+                    if (test.title.length >= 3)
+                        runCase.title = test.title[test.title.length - 2].concat("/", test.title[test.title.length - 1]);
+                    else
+                        runCase.title = test.title[test.title.length - 1];
+
                     runCase.state_string = test.state;
                     runCase.isCreated = false;
 
@@ -331,30 +403,12 @@ class TestRaiImporter {
         json.update(saveTo.concat('run_data_', new Date().getMilliseconds(), '.json'), completed_data);
     }
 
-    sendResultsFromArtifacts(projectId, suiteId, runId, dataFromArtifact) {
-        let sections = this.getSuiteSections(this._project.id, this._suite.id);
-        let cases_from_suite = this.getSuiteCases(this._project.id, this._suite.id)
-
-        let completed_data = {};
-        let completed_sections = [];
-
-        sections.forEach(section => {
-            let filtered_cases = cases_from_suite.filter(c => c.section_id === section.id)
-            let s = {};
-            s.section_name = section.name;
-            s.section_id = section.id;
-            if (filtered_cases)
-                s.cases = filtered_cases;
-
-            completed_sections.push(s);
-        })
-        completed_data.sections = completed_sections;
-
+    sendResultsFromArtifacts(projectId, suiteId, runId, dataFromArtifact, completed_data) {
         let casesReport = [];
 
         dataFromArtifact.sections.forEach(localRun => {
-            this.casesFromTR = completed_data.sections.filter(s => s.section_name === localRun.section_name)[0].cases;
-            this.casesFromTR.forEach(caseTR => {
+            this.casesFromTR = completed_data.filter(s => s.section_name === localRun.section_name)[0];
+            this.casesFromTR.cases.forEach(caseTR => {
                 let caseLocal = localRun.cases.filter(c => c.title.trim() === caseTR.title)[0];
                 let errorString = 'Test was passed!';
 
@@ -387,8 +441,8 @@ class TestRaiImporter {
         for (let i = 0; i < casesReport.length; i += n) {
             casesReport.slice(i, i + n).forEach(c => console.log("Send results for " + c.case_id + " to run:" + runId + " by status " + c.status_id));
             this.tr.addResultsForCases(runId, casesReport.slice(i, i + n));
-            console.log('Wait 15 seconds')
-            sleep.sleep(15);
+            console.log('Wait 5 seconds')
+            sleep.sleep(5);
         }
     }
 
@@ -521,9 +575,7 @@ class TestRaiImporter {
     }
 
     importStatusesToNewRunFromArtifacts(closeRun, fromFolder) {
-
         fs.readdir(fromFolder, (err, files) => {
-
             let runs = this.getRuns(this._project.id);
 
             let date = new Date();
@@ -563,18 +615,64 @@ class TestRaiImporter {
                 this.updateRun(runObj.id, this._suite.id, this.runName, this.runDescription)
             }
 
+            let completed_sections = [];
+
+            let sections = this.getAllSections();
+            let cases_from_suite = this.getAllCases();
+            sections.forEach(section => {
+                let filtered_cases = cases_from_suite.filter(c => c.section_id === section.id)
+                let s = {};
+                s.section_name = section.name;
+                s.section_id = section.id;
+                s.cases = filtered_cases;
+
+                completed_sections.push(s);
+            })
 
             files.forEach(file => {
                 let absolute_path_to_file = resolve(fromFolder.concat(file));
                 console.log(absolute_path_to_file);
                 let data_from_file = require(absolute_path_to_file);
-                this.sendResultsFromArtifacts(this._project.id, this._suite.id, runObj.id, data_from_file)
+                this.sendResultsFromArtifacts(this._project.id, this._suite.id, runObj.id, data_from_file, completed_sections)
             });
 
             this.closeRun(runObj.id, closeRun)
         });
 
 
+    }
+
+    getAllCases() {
+        let cases_from_suite = [];
+        let current_page = 0;
+        let current_step = 0;
+        do {
+            let c = this.getSuiteCases(this._project.id, this._suite.id, current_step);
+            current_page = c.length;
+            c.forEach(cp => {
+                cases_from_suite.push(cp);
+            })
+            current_step += 250
+
+        } while (250 <= current_page)
+        return cases_from_suite;
+    }
+
+    getAllSections() {
+        let sections_from_suite = [];
+        let current_page = 0;
+        let current_step = 0;
+        do {
+            let c = this.getSuiteSections(this._project.id, this._suite.id, current_step);
+
+            current_page = c.length;
+            c.forEach(cp => {
+                sections_from_suite.push(cp);
+            })
+            current_step += 250
+
+        } while (250 <= current_page)
+        return sections_from_suite;
     }
 
     uploadScreenShotsToFailedTests(send_images) {
