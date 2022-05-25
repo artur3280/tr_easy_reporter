@@ -1,5 +1,11 @@
 # TestRail reporter for Cypress
 ## _Updates_
+### Version 1.0.00
+
+1. import optimization
+2. added building multi-level cascading sections based on folders and subfolders in your tests
+3. The first load of tests is still slow (depending on the number of tests and their structure), but all subsequent checks and loads are much faster.
+
 ### Version 0.7.0
 * Added new methods:
 ```sh
