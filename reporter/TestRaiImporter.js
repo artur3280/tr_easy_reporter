@@ -227,10 +227,21 @@ class TestRaiImporter {
                     let failed_cases = failedSection.cases.filter(c => c.isCreated === false);
                     if (failed_cases.length > 0) {
                         for (let failedCase of failed_cases) {
-                            this.createNewCase(section_id, failedCase.title.trim(), 'You can see more details on the Dashboard.')
+                            let request;
+                            try {
+                                request = this.createNewCase(section_id, failedCase.title.trim(), 'You can see more details on the Dashboard.');
+                            } catch (e) {
+                                console.log("Status code was ".concat(request.status, " When creating new case"))
+                                let cases = this.getSectionCases(this._project.id, this._suite.id, section_id).filter(c => c.title === failedCase.title.trim());
+                                if (cases.length === 0) {
+                                    console.log('Try to recreate new request '.concat(failedCase.title.trim(), ' for ', section_id, ' section'))
+                                    this.createNewCase(section_id, failedCase.title.trim(), 'You can see more details on the Dashboard.');
+                                } else {
+                                    console.log('Case '.concat(cases[0].id, ' was created'))
+                                }
+                            }
                         }
                     }
-
                 }
             });
         });
@@ -317,12 +328,7 @@ class TestRaiImporter {
 
                 r.tests.forEach(test => {
                     let runCase = {};
-
-                    if (test.title.length >= 3)
-                        runCase.title = test.title[test.title.length - 2].concat("/", test.title[test.title.length - 1]);
-                    else
-                        runCase.title = test.title[test.title.length - 1];
-
+                    runCase.title = test.title[test.title.length - 1];
                     runCase.state_string = test.state;
                     runCase.isCreated = false;
 
@@ -441,10 +447,19 @@ class TestRaiImporter {
         let n = 100;
         let temp = [];
         for (let i = 0; i < casesReport.length; i += n) {
-            casesReport.slice(i, i + n).forEach(c => console.log("Send results for " + c.case_id + " to run:" + runId + " by status " + c.status_id));
-            this.tr.addResultsForCases(runId, casesReport.slice(i, i + n));
-            console.log('Wait 5 seconds')
-            sleep.sleep(5);
+            let request;
+            try {
+                casesReport.slice(i, i + n).forEach(c => console.log("Send results for " + c.case_id + " to run:" + runId + " by status " + c.status_id));
+                request = this.tr.addResultsForCases(runId, casesReport.slice(i, i + n));
+                console.log('Wait 5 seconds')
+                sleep.sleep(5);
+            } catch (e) {
+                console.log("Status code was ".concat(request.status, " When adding results"))
+                casesReport.slice(i, i + n).forEach(c => console.log("Send results for " + c.case_id + " to run:" + runId + " by status " + c.status_id));
+                request = this.tr.addResultsForCases(runId, casesReport.slice(i, i + n));
+                console.log('Wait 5 seconds')
+                sleep.sleep(5);
+            }
         }
     }
 
@@ -626,11 +641,9 @@ class TestRaiImporter {
 
                 if (filtered_cases.length > 0) {
                     let s = {};
-                    console.log(section.name)
                     s.section_name = section.name;
                     s.section_id = section.id;
                     s.cases = filtered_cases;
-
                     completed_sections.push(s);
                 }
             })

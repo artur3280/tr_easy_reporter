@@ -14,7 +14,7 @@ class TestRailConnector {
 
     apiGet(apiMethod, queryVariables) {
         let url = this.host + this.uri + apiMethod;
-        return this._call('get', url, queryVariables, null);
+        return JSON.parse(this._call('get', url, queryVariables, null).responseText);
     };
 
     apiPost(apiMethod, body, queryVariables) {
@@ -40,49 +40,65 @@ class TestRailConnector {
         xmlHttp.setRequestHeader('Accept', 'application/json')
         xmlHttp.setRequestHeader('x-api-ident', 'beta')
         xmlHttp.send(body);
-
-        if (xmlHttp.status === 500) {
-            for (let i = 0; i < 5; i++) {
-                console.log("Retry requests with waiter as 5 sec.....")
-                sleep.sleep(5);
-                let xmlHttp = new XMLHttpRequest();
-                if (queryVariables != null) {
-                    url += '&' + qs.stringify(queryVariables);
-                } else {
-                    url += ''
-                }
-
-                xmlHttp.open(method, url, false, this.user, this.password);
-                xmlHttp.setRequestHeader('Content-Type', 'application/json')
-                xmlHttp.setRequestHeader('Accept', 'application/json')
-                xmlHttp.setRequestHeader('x-api-ident', 'beta')
-                xmlHttp.send(body);
-                if (xmlHttp.status !== 500 && xmlHttp.status === 200) {
-                    break;
-                }
-            }
-        } else if (xmlHttp.status === 429) {
-            console.log('Account is undergoing daily maintenance.')
-            sleep.sleep(60);
-            let xmlHttp = new XMLHttpRequest();
-            if (queryVariables != null) {
-                url += '&' + qs.stringify(queryVariables);
-            } else {
-                url += ''
-            }
-
-            xmlHttp.open(method, url, false, this.user, this.password);
-            xmlHttp.setRequestHeader('Content-Type', 'application/json')
-            xmlHttp.setRequestHeader('Accept', 'application/json')
-            xmlHttp.setRequestHeader('x-api-ident', 'beta')
-            xmlHttp.send(body);
-            if (xmlHttp.status !== 200) throw new Error(xmlHttp.status + ":" + xmlHttp.statusText + "\n " + xmlHttp.responseText)
-        } else if (xmlHttp.status !== 200) {
-            throw new Error(xmlHttp.status + ":" + xmlHttp.statusText + "\n " + xmlHttp.responseText)
-        }
-
-        return JSON.parse(xmlHttp.responseText);
+        return xmlHttp;
     }
+
+    // _call(method, url, queryVariables, body) {
+    //     let xmlHttp = new XMLHttpRequest();
+    //     if (queryVariables != null) {
+    //         url += '&' + qs.stringify(queryVariables);
+    //     } else {
+    //         url += ''
+    //     }
+    //
+    //     xmlHttp.open(method, url, false, this.user, this.password);
+    //     xmlHttp.setRequestHeader('Content-Type', 'application/json')
+    //     xmlHttp.setRequestHeader('Accept', 'application/json')
+    //     xmlHttp.setRequestHeader('x-api-ident', 'beta')
+    //     xmlHttp.send(body);
+    //
+    //     if (xmlHttp.status === 500) {
+    //         for (let i = 0; i < 5; i++) {
+    //             console.log("Retry requests with waiter as 5 sec.....")
+    //             sleep.sleep(5);
+    //             let xmlHttp = new XMLHttpRequest();
+    //             if (queryVariables != null) {
+    //                 url += '&' + qs.stringify(queryVariables);
+    //             } else {
+    //                 url += ''
+    //             }
+    //
+    //             xmlHttp.open(method, url, false, this.user, this.password);
+    //             xmlHttp.setRequestHeader('Content-Type', 'application/json')
+    //             xmlHttp.setRequestHeader('Accept', 'application/json')
+    //             xmlHttp.setRequestHeader('x-api-ident', 'beta')
+    //             xmlHttp.send(body);
+    //             if (xmlHttp.status !== 500 && xmlHttp.status === 200) {
+    //                 break;
+    //             }
+    //         }
+    //     } else if (xmlHttp.status === 429) {
+    //         console.log('Account is undergoing daily maintenance.')
+    //         sleep.sleep(60);
+    //         let xmlHttp = new XMLHttpRequest();
+    //         if (queryVariables != null) {
+    //             url += '&' + qs.stringify(queryVariables);
+    //         } else {
+    //             url += ''
+    //         }
+    //
+    //         xmlHttp.open(method, url, false, this.user, this.password);
+    //         xmlHttp.setRequestHeader('Content-Type', 'application/json')
+    //         xmlHttp.setRequestHeader('Accept', 'application/json')
+    //         xmlHttp.setRequestHeader('x-api-ident', 'beta')
+    //         xmlHttp.send(body);
+    //         if (xmlHttp.status !== 200) throw new Error(xmlHttp.status + ":" + xmlHttp.statusText + "\n " + xmlHttp.responseText)
+    //     } else if (xmlHttp.status !== 200) {
+    //         throw new Error(xmlHttp.status + ":" + xmlHttp.statusText + "\n " + xmlHttp.responseText)
+    //     }
+    //
+    //     return JSON.parse(xmlHttp.responseText);
+    // }
 
     _upload(auth, url, queryVariables, filePath) {
         if (queryVariables != null) {
