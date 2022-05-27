@@ -113,7 +113,7 @@ class TestRaiImporter {
             suite_id: suiteId,
             parent_id: parent_id
         }
-        return this.tr.addSection(projectId, body);
+        return JSON.parse(this.tr.addSection(projectId, body).responseText);
     }
 
 
@@ -125,7 +125,7 @@ class TestRaiImporter {
             suite_id: suiteId,
             description: description
         }
-        return this.tr.addRun(projectId, body);
+        return JSON.parse(this.tr.addRun(projectId, body).responseText);
     }
 
     updateRun(runId, suiteId, name, description) {
