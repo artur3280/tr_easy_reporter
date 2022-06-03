@@ -316,7 +316,7 @@ class TestRaiImporter {
         let completed_sections = [];
 
         this.run.runs.forEach(r => {
-            let filtered_section = sections.filter(section => section.name === r.spec.name);
+            let filtered_section = sections.filter(section => section.name === r.spec.name.split('/')[r.spec.name.split('/').length-1]);
 
             let s = {};
             if (filtered_section.length === 0) {
