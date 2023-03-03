@@ -316,7 +316,7 @@ class TestRaiImporter {
         let completed_sections = [];
 
         this.run.runs.forEach(r => {
-            let filtered_section = sections.filter(section => section.name === r.spec.name.split('/')[r.spec.name.split('/').length-1]);
+            let filtered_section = sections.filter(section => section.name === r.spec.name.split('/')[r.spec.name.split('/').length - 1]);
 
             let s = {};
             if (filtered_section.length === 0) {
@@ -418,29 +418,38 @@ class TestRaiImporter {
                 s.section_name === localRun.section_name.split('/')[localRun.section_name.split('/').length - 1])[0];
             this.casesFromTR.cases.forEach(caseTR => {
                 let caseLocal = localRun.cases.filter(c => c.title.trim() === caseTR.title)[0];
-                let errorString = 'Test was passed!';
+                if (caseLocal !== undefined) {
+                    let errorString = 'Test was passed!';
 
-                if (caseLocal.state_string === 'failed') {
-                    this.statusCase = caseLocal.state_id;
-                    errorString = caseLocal.error_message
-                }
+                    if (caseLocal.state_string === 'failed') {
+                        this.statusCase = caseLocal.state_id;
+                        errorString = caseLocal.error_message
+                    }
 
-                if (caseLocal.state_string === 'passed') {
-                    this.statusCase = caseLocal.state_id;
-                    errorString = 'Looks good!';
-                }
+                    if (caseLocal.state_string === 'passed') {
+                        this.statusCase = caseLocal.state_id;
+                        errorString = 'Looks good!';
+                    }
 
-                if (caseLocal.state_string === 'skipped') {
-                    this.statusCase = caseLocal.state_id;
-                    errorString = 'Case was skipped!';
-                }
+                    if (caseLocal.state_string === 'skipped') {
+                        this.statusCase = caseLocal.state_id;
+                        errorString = 'Case was skipped!';
+                    }
 
-                let caseReport = {
-                    case_id: caseTR.id,
-                    status_id: this.statusCase,
-                    comment: errorString
+                    let caseReport = {
+                        case_id: caseTR.id,
+                        status_id: this.statusCase,
+                        comment: errorString
+                    }
+                    casesReport.push(caseReport);
+                } else {
+                    let caseReport = {
+                        case_id: caseTR.id,
+                        status_id: 4,
+                        comment: "This case may have been deleted or renamed earlier. Please see the test code."
+                    }
+                    casesReport.push(caseReport);
                 }
-                casesReport.push(caseReport);
             })
         })
 
