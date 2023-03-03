@@ -1,8 +1,8 @@
 # TestRail reporter for Cypress
 ## _Updates_
 ### Version 1.0.00
-
 1. Fixed registration of cases that are not in the test code, but are on TR
+
 ### Version 1.0.00
 
 1. import optimization
